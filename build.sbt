@@ -55,6 +55,7 @@ libraryDependencies ++= {
     , "io.spray" %% "spray-client" % sprayV
     , "io.spray" %% "spray-testkit" % sprayV % "test"
     , "com.typesafe.akka" %% "akka-actor" % akkaV
+    , "com.typesafe.akka" %% "akka-slf4j" % akkaV % "provided"
     , "org.scalatest" %% "scalatest" % "2.2.1" % "test"
     // -- Logging --
     , "org.slf4j" % "slf4j-api" % "1.7.12"
