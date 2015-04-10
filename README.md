@@ -7,7 +7,7 @@ Vault Common Library
 * In the Import Project dialog, check "Create directories for empty content roots automatically" and set your Project SDK to 1.8 (TODO: do we actually require 1.8?)
 
 ## Bash Setup
-Ensure the following prerequisites are installed. On a Mac, `sbt` and `liquibase` may be easily installed via [Homebrew](http://brew.sh).
+Ensure the following prerequisites are installed. On a Mac, `sbt` may be easily installed via [Homebrew](http://brew.sh).
 * [sbt](http://scala-sbt.org)
 * [openam](https://forgerock.org/openam)
 
