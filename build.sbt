@@ -29,7 +29,7 @@ val versionSuffix = {
 // Set the composite version
 version := versionRoot + "-" + versionSuffix.getOrElse((versionRevision + 1) + "-SNAPSHOT")
 
-val artifactory = "http://artifactory.broadinstitute.org:8081/artifactory/"
+val artifactory = "https://artifactory.broadinstitute.org/artifactory/"
 
 credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 
