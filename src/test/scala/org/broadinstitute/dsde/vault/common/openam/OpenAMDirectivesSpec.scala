@@ -7,6 +7,7 @@ import ch.qos.logback.classic.{Level, LoggerContext}
 import ch.qos.logback.core.OutputStreamAppender
 import ch.qos.logback.core.encoder.EchoEncoder
 import org.broadinstitute.dsde.vault.common.openam.OpenAMDirectives._
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FreeSpec, Matchers}
 import org.slf4j.LoggerFactory
 import spray.http.HttpHeaders.`User-Agent`
@@ -19,14 +20,25 @@ import spray.testkit.ScalatestRouteTest
 import spray.httpx.SprayJsonSupport._
 import spray.json.DefaultJsonProtocol._
 
-class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTest {
+import scala.concurrent.duration._
+
+class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTest with ScalaFutures {
 
   val OkResponse = HttpResponse()
   val completeOk = complete(OkResponse)
 
-  "OpenAMClient" - {
+  "OpenAMDirectives" - {
 
-    "when accessing OpenAM logOpenAMRequest directive" - {
+    lazy val openAMSession = OpenAMSession(()).futureValue(timeout(scaled(OpenAMConfig.timeoutSeconds.seconds)), interval(scaled(0.5.seconds)))
+
+    "when accessing the OpenAM session" - {
+      "the openAMSession should be valid" in {
+        openAMSession.cookies.size should be(1)
+        openAMSession.cookies.head.name should be(OpenAMConfig.tokenCookie)
+      }
+    }
+
+    "when accessing OpenAM logOpenAMRequest() directive" - {
 
       val commonNameQuoted = """"%s"""".format(OpenAMConfig.commonName.replaceAll("\"", "\"\""))
 
@@ -75,7 +87,7 @@ class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTes
       }
 
       "should log the request" in withTestLogger { logger =>
-        Get("/hello") ~> OpenAMSession ~> logOpenAMRequest {
+        Get("/hello") ~> openAMSession ~> logOpenAMRequest() {
           completeOk
         } ~> check {
           status should be(OK)
@@ -86,7 +98,7 @@ class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTes
 
       "should log the request with query parameters" in withTestLogger { logger =>
         Get(Uri(path = Path("/hello"), query = Query("key1" -> "value1"))) ~>
-          OpenAMSession ~> logOpenAMRequest {
+          openAMSession ~> logOpenAMRequest() {
           completeOk
         } ~> check {
           status should be(OK)
@@ -97,7 +109,7 @@ class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTes
 
       "should log the post body when debug is enabled" in withTestLogger { logger =>
         logger.setLevel(Level.DEBUG)
-        Post("/hello", Map.empty[String, String]) ~> OpenAMSession ~> logOpenAMRequest {
+        Post("/hello", Map.empty[String, String]) ~> openAMSession ~> logOpenAMRequest() {
           completeOk
         } ~> check {
           status should be(OK)
@@ -107,7 +119,7 @@ class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTes
       }
 
       "should not log the post body when debug is not enabled" in withTestLogger { logger =>
-        Post("/hello", Map.empty[String, String]) ~> OpenAMSession ~> logOpenAMRequest {
+        Post("/hello", Map.empty[String, String]) ~> openAMSession ~> logOpenAMRequest() {
           completeOk
         } ~> check {
           status should be(OK)
@@ -117,12 +129,12 @@ class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTes
       }
 
       "should log the request without headers" in withTestLogger { logger =>
-        Get("/hello") ~> OpenAMSession ~>
+        Get("/hello") ~> openAMSession ~>
           // NOTE: Still unsure how to simply add a header to a spray-testkit.
           //   Based the snippet including "headerValuePF ..." from HeaderDirectivesSpec. Example:
           //   https://github.com/spray/spray/blob/340614c9af7facf6a8b95bf4cc7733e0fca9299e/spray-routing-tests/src/test/scala/spray/routing/HeaderDirectivesSpec.scala#L81
           `User-Agent`("custom-agent") ~> headerValuePF { case h => h } { h =>
-          logOpenAMRequest {
+          logOpenAMRequest() {
             completeOk
           }
         } ~>
@@ -134,7 +146,7 @@ class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTes
       }
 
       "should reject the request when missing cookie" in withTestLogger { logger =>
-        Get("/hello") ~> logOpenAMRequest {
+        Get("/hello") ~> logOpenAMRequest() {
           completeOk
         } ~> check {
           rejection should be(MissingCookieRejection(OpenAMConfig.tokenCookie))
@@ -146,7 +158,7 @@ class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTes
     "when accessing OpenAM tokenFromCookie directive" - {
 
       "should get a token" in {
-        Get("/hello") ~> OpenAMSession ~> tokenFromCookie { token =>
+        Get("/hello") ~> openAMSession ~> tokenFromCookie { token =>
           token shouldNot be(empty)
           completeOk
         } ~> check {
@@ -169,7 +181,7 @@ class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTes
     "when accessing OpenAM tokenFromOptionalCookie directive" - {
 
       "should get an optional token" in {
-        Get("/hello") ~> OpenAMSession ~> tokenFromOptionalCookie { token =>
+        Get("/hello") ~> openAMSession ~> tokenFromOptionalCookie { token =>
           token shouldNot be(empty)
           token.get shouldNot be(empty)
           completeOk
@@ -194,7 +206,7 @@ class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTes
     "when accessing OpenAM commonNameFromCookie directive" - {
 
       "should get the common name" in {
-        Get("/hello") ~> OpenAMSession ~> commonNameFromCookie { commonName =>
+        Get("/hello") ~> openAMSession ~> commonNameFromCookie() { commonName =>
           commonName shouldNot be(empty)
           completeOk
         } ~> check {
@@ -204,7 +216,7 @@ class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTes
       }
 
       "should reject the request when missing cookie" in {
-        Get("/hello") ~> commonNameFromCookie { commonName =>
+        Get("/hello") ~> commonNameFromCookie() { commonName =>
           fail("should not run this line")
           completeOk
         } ~> check {
@@ -217,7 +229,7 @@ class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTes
     "when accessing OpenAM commonNameFromOptionalCookie directive" - {
 
       "should get an optional common name" in {
-        Get("/hello") ~> OpenAMSession ~> commonNameFromOptionalCookie { commonName =>
+        Get("/hello") ~> openAMSession ~> commonNameFromOptionalCookie() { commonName =>
           commonName shouldNot be(empty)
           commonName.get shouldNot be(empty)
           completeOk
@@ -228,7 +240,7 @@ class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTes
       }
 
       "should get an empty common name when missing cookie" in {
-        Get("/hello") ~> commonNameFromOptionalCookie { commonName =>
+        Get("/hello") ~> commonNameFromOptionalCookie() { commonName =>
           commonName should be(empty)
           completeOk
         } ~> check {
