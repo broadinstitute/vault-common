@@ -31,15 +31,6 @@ version := versionRoot + "-" + versionSuffix.getOrElse((versionRevision + 1) + "
 
 val artifactory = "https://artifactory.broadinstitute.org/artifactory/"
 
-credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
-
-publishTo := {
-  if (isSnapshot.value)
-    None // NOTE: Use publish-local when working on snapshots
-  else
-    Option("artifactory-releases-publish" at artifactory + "libs-release-local")
-}
-
 resolvers += "artifactory-releases" at artifactory + "libs-release"
 
 scalaVersion := "2.11.2"
