@@ -6,15 +6,14 @@ import spray.client.pipelining._
 import spray.http.Uri
 import spray.httpx.SprayJsonSupport._
 
-import scala.concurrent.{Awaitable, Await}
-import scala.concurrent.duration._
+import scala.concurrent.Future
 
 object OpenAMClient {
   implicit val system = ActorSystem()
 
   import system.dispatcher
 
-  def authenticate(): AuthenticateResponse =
+  def authenticate(): Future[AuthenticateResponse] =
     authenticate(
       OpenAMConfig.deploymentUri,
       OpenAMConfig.username,
@@ -24,7 +23,7 @@ object OpenAMClient {
       OpenAMConfig.authIndexValue)
 
   def authenticate(deploymentUri: String, username: String, password: String, realm: Option[String],
-                   authIndexType: Option[String], authIndexValue: Option[String]): AuthenticateResponse = {
+                   authIndexType: Option[String], authIndexValue: Option[String]): Future[AuthenticateResponse] = {
 
     // Add optional information about how we are authenticating
     var queryValues = Seq.empty[(String, String)]
@@ -38,10 +37,10 @@ object OpenAMClient {
         addHeader("X-OpenAM-Password", password) ~>
         sendReceive ~>
         unmarshal[AuthenticateResponse]
-    waitResponse(pipeline(Post(uri)))
+    pipeline(Post(uri))
   }
 
-  def lookupIdFromSession(deploymentUri: String, token: String) = {
+  def lookupIdFromSession(deploymentUri: String, token: String): Future[IdFromSessionResponse] = {
     val uri = Uri(s"$deploymentUri/json/users").
       withQuery("_action" -> "idFromSession")
     val pipeline =
@@ -49,25 +48,22 @@ object OpenAMClient {
         sendReceive ~>
         unmarshal[IdFromSessionResponse]
     // NOTE: Using the empty map to set the required json content-type header
-    waitResponse(pipeline(Post(uri, Map.empty[String, String])))
+    pipeline(Post(uri, Map.empty[String, String]))
   }
 
   /**
    * Retrieves the username and common names (CN) by using the token.
    */
-  def lookupUsernameCN(deploymentUri: String, token: String, id: String, realm: Option[String]) = {
+  def lookupUsernameCN(deploymentUri: String, token: String, id: String, realm: Option[String]): Future[UsernameCNResponse] = {
     val uri = Uri(s"$deploymentUri/json${realm.getOrElse("")}/users/$id").
       withQuery("_fields" -> "username,cn")
     val pipeline =
       addToken(token) ~>
         sendReceive ~>
         unmarshal[UsernameCNResponse]
-    waitResponse(pipeline(Get(uri)))
+    pipeline(Get(uri))
   }
 
   private def addToken(token: String) =
     addHeader(OpenAMConfig.tokenCookie, token)
-
-  private def waitResponse[Response](awaitable: Awaitable[Response]) =
-    Await.result(awaitable, OpenAMConfig.timeoutSeconds.seconds)
 }
