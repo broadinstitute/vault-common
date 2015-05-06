@@ -1,4 +1,4 @@
-package org.broadinstitute.dsde.vault.common.openam
+package org.broadinstitute.dsde.vault.common.directives
 
 import java.io.ByteArrayOutputStream
 
@@ -6,7 +6,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.{Level, LoggerContext}
 import ch.qos.logback.core.OutputStreamAppender
 import ch.qos.logback.core.encoder.EchoEncoder
-import org.broadinstitute.dsde.vault.common.openam.OpenAMDirectives._
+import org.broadinstitute.dsde.vault.common.directives.OpenAMDirectives._
+import org.broadinstitute.dsde.vault.common.openam.{OpenAMConfig, OpenAMSession}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FreeSpec, Matchers}
 import org.slf4j.LoggerFactory
@@ -22,21 +23,11 @@ import spray.json.DefaultJsonProtocol._
 
 import scala.concurrent.duration._
 
-class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTest with ScalaFutures {
-
-  val OkResponse = HttpResponse()
-  val completeOk = complete(OkResponse)
+class OpenAMDirectivesSpec extends FreeSpec with Matchers with ScalatestRouteTest with ScalaFutures with CommonDirectivesSpec {
 
   "OpenAMDirectives" - {
 
     lazy val openAMSession = OpenAMSession(()).futureValue(timeout(scaled(OpenAMConfig.timeoutSeconds.seconds)), interval(scaled(0.5.seconds)))
-
-    "when accessing the OpenAM session" - {
-      "the openAMSession should be valid" in {
-        openAMSession.cookies.size should be(1)
-        openAMSession.cookies.head.name should be(OpenAMConfig.tokenCookie)
-      }
-    }
 
     "when accessing OpenAM logOpenAMRequest() directive" - {
 

@@ -6,8 +6,7 @@ import spray.client.pipelining._
 import spray.http.Uri
 import spray.httpx.SprayJsonSupport._
 
-import scala.concurrent.{Future, Awaitable, Await}
-import scala.concurrent.duration._
+import scala.concurrent.Future
 
 object OpenAMClient {
   implicit val system = ActorSystem()

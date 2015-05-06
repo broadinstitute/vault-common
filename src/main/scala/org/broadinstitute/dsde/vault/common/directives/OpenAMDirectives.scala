@@ -1,9 +1,10 @@
-package org.broadinstitute.dsde.vault.common.openam
+package org.broadinstitute.dsde.vault.common.directives
 
+import org.broadinstitute.dsde.vault.common.openam.{OpenAMClient, OpenAMConfig}
 import org.broadinstitute.dsde.vault.common.util.ImplicitMagnet
 import org.slf4j.LoggerFactory
-import spray.routing.{Directive0, Directive1}
 import spray.routing.Directives._
+import spray.routing.{Directive0, Directive1}
 
 import scala.concurrent.ExecutionContext
 
