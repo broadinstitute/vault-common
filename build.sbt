@@ -84,3 +84,23 @@ testOptions in Test += Tests.Setup(classLoader =>
     .getMethod("getLogger", classLoader.loadClass("java.lang.String"))
     .invoke(null, "ROOT")
 )
+
+autoAPIMappings := true
+
+// autoAPIMappings isn't 100%. This is. http://stackoverflow.com/a/20919304/3320205
+apiMappings ++= {
+  val cp: Seq[Attributed[File]] = (fullClasspath in Compile).value
+  def findManagedDependency(organization: String, name: String): File = {
+    ( for {
+      entry <- cp
+      module <- entry.get(moduleID.key)
+      if module.organization == organization
+      if module.name.startsWith(name)
+      jarFile = entry.data
+    } yield jarFile
+      ).head
+  }
+  Map(
+    findManagedDependency("io.spray", "spray-routing") -> url("http://spray.io/documentation/1.1-SNAPSHOT/api/")
+  )
+}
