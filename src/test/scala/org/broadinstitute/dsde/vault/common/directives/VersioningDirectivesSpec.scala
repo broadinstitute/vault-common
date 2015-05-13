@@ -25,10 +25,7 @@ class VersioningDirectivesSpec extends FreeSpec with Matchers with ScalatestRout
               completeOk
             }
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
 
       "optionalVersion should get a version when there" in {
@@ -40,10 +37,7 @@ class VersioningDirectivesSpec extends FreeSpec with Matchers with ScalatestRout
               completeOk
             }
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
 
       "optionalVersion should not match a non-version" in {
@@ -57,10 +51,7 @@ class VersioningDirectivesSpec extends FreeSpec with Matchers with ScalatestRout
               }
             }
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
 
       "optionalVersion should match when followed by a non-version" in {
@@ -75,57 +66,96 @@ class VersioningDirectivesSpec extends FreeSpec with Matchers with ScalatestRout
               }
             }
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
     }
 
-    "when using pathPrefixVersion" - {
-      "pathPrefixVersion should not get a version when not there" in {
+    "when using defaultVersion" - {
+      "defaultVersion should return default when version not there" in {
         Get("/hello") ~> {
-          pathPrefixVersion("hello") { version =>
+          pathPrefix("hello") {
+            defaultVersion(-1) { version =>
+              version should be(-1)
+              completeOk
+            }
+          }
+        } ~> checkOk
+      }
+      "defaultVersion should return version when there" in {
+        Get("/hello/v1") ~> {
+          pathPrefix("hello") {
+            defaultVersion(-1) { version =>
+              version should be(1)
+              completeOk
+            }
+          }
+        } ~> checkOk
+      }
+
+      "defaultVersion should not match a non-version" in {
+        Get("/hello/2") ~> {
+          pathPrefix("hello") {
+            defaultVersion(-1) { version =>
+              path(IntNumber) { i =>
+                version should be(-1)
+                i should be(2)
+                completeOk
+              }
+            }
+          }
+        } ~> checkOk
+      }
+
+      "defaultVersion should match when followed by a non-version" in {
+        Get("/hello/v1/2") ~> {
+          pathPrefix("hello") {
+            defaultVersion(-1) { version =>
+              path(IntNumber) { i =>
+                version should be(1)
+                i should be(2)
+                completeOk
+              }
+            }
+          }
+        } ~> checkOk
+      }
+    }
+
+    "when using pathPrefixOptionalVersion" - {
+      "pathPrefixOptionalVersion should not get a version when not there" in {
+        Get("/hello") ~> {
+          pathPrefixOptionalVersion("hello") { version =>
             version should be(empty)
             completeOk
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
 
-      "pathPrefixVersion should get a version when there" in {
+      "pathPrefixOptionalVersion should get a version when there" in {
         Get("/hello/v1") ~> {
-          pathPrefixVersion("hello") { version =>
+          pathPrefixOptionalVersion("hello") { version =>
             version shouldNot be(empty)
             version.get should be(1)
             completeOk
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
 
-      "pathPrefixVersion should not match a non-version" in {
+      "pathPrefixOptionalVersion should not match a non-version" in {
         Get("/hello/2") ~> {
-          pathPrefixVersion("hello") { version =>
+          pathPrefixOptionalVersion("hello") { version =>
             path(IntNumber) { i =>
               version should be(empty)
               i should be(2)
               completeOk
             }
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
 
-      "pathPrefixVersion should match when followed by a non-version" in {
+      "pathPrefixOptionalVersion should match when followed by a non-version" in {
         Get("/hello/v1/2") ~> {
-          pathPrefixVersion("hello") { version =>
+          pathPrefixOptionalVersion("hello") { version =>
             path(IntNumber) { i =>
               version shouldNot be(empty)
               version.get should be(1)
@@ -133,140 +163,250 @@ class VersioningDirectivesSpec extends FreeSpec with Matchers with ScalatestRout
               completeOk
             }
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
+      }
+    }
+
+    "when using pathOptionalVersion" - {
+      "pathVersion should not get a version when not there" in {
+        Get("/hello") ~> {
+          pathOptionalVersion("hello") { version =>
+            version should be(empty)
+            completeOk
+          }
+        } ~> checkOk
+      }
+
+      "pathOptionalVersion should get a version when there" in {
+        Get("/hello/v1") ~> {
+          pathOptionalVersion("hello") { version =>
+            version shouldNot be(empty)
+            version.get should be(1)
+            completeOk
+          }
+        } ~> checkOk
+      }
+
+      "pathOptionalVersion should not match a non-version" in {
+        Get("/hello/2") ~> {
+          pathOptionalVersion("hello") { version =>
+            path(IntNumber) { i =>
+              fail()
+            }
+          }
+        } ~> checkUnhandled
+      }
+
+      "pathOptionalVersion should match when followed by a non-version" in {
+        Get("/hello/v1/2") ~> {
+          pathOptionalVersion("hello") { version =>
+            path(IntNumber) { i =>
+              fail()
+            }
+          }
+        } ~> checkUnhandled
+      }
+    }
+
+    "when using pathOptionalVersion with a suffix" - {
+      "pathOptionalVersion matching for a suffix should not match a non-version when no suffix" in {
+        Get("/hello") ~> {
+          pathOptionalVersion("hello", IntNumber) { (version, i) =>
+            fail()
+          }
+        } ~> checkUnhandled
+      }
+
+      "pathOptionalVersion matching for a suffix should not match a version when no suffix" in {
+        Get("/hello/v1") ~> {
+          pathOptionalVersion("hello", IntNumber) { (version, i) =>
+            fail()
+          }
+        } ~> checkUnhandled
+      }
+
+      "pathOptionalVersion with a suffix should not get a version when not there" in {
+        Get("/hello/2") ~> {
+          pathOptionalVersion("hello", IntNumber) { (version, i) =>
+            version should be(empty)
+            i should be(2)
+            completeOk
+          }
+        } ~> checkOk
+      }
+
+      "pathOptionalVersion with a suffix should get a version when there" in {
+        Get("/hello/v1/2") ~> {
+          pathOptionalVersion("hello", IntNumber) { (version, i) =>
+            version shouldNot be(empty)
+            version.get should be(1)
+            i should be(2)
+            completeOk
+          }
+        } ~> checkOk
+      }
+
+      "pathOptionalVersion with multiple suffixes should not get a version when not there" in {
+        Get("/hello/2/a1") ~> {
+          pathOptionalVersion("hello", IntNumber / Segment) { (version, i, str) =>
+            version should be(empty)
+            i should be(2)
+            str should be("a1")
+            completeOk
+          }
+        } ~> checkOk
+      }
+
+      "pathOptionalVersion with multiple suffixes should get a version when there" in {
+        Get("/hello/v1/2/a1") ~> {
+          pathOptionalVersion("hello", IntNumber / Segment ) { (version, i, str) =>
+            version shouldNot be(empty)
+            version.get should be(1)
+            i should be(2)
+            str should be("a1")
+            completeOk
+          }
+        } ~> checkOk
+      }
+    }
+
+    "when using pathPrefixVersion" - {
+      "pathPrefixVersion should not get a version when not there" in {
+        Get("/hello") ~> {
+          pathPrefixVersion("hello", -1) { version =>
+            version should be(-1)
+            completeOk
+          }
+        } ~> checkOk
+      }
+
+      "pathPrefixVersion should get a version when there" in {
+        Get("/hello/v1") ~> {
+          pathPrefixVersion("hello", -1) { version =>
+            version should be(1)
+            completeOk
+          }
+        } ~> checkOk
+      }
+
+      "pathPrefixVersion should not match a non-version" in {
+        Get("/hello/2") ~> {
+          pathPrefixVersion("hello", -1) { version =>
+            path(IntNumber) { i =>
+              version should be(-1)
+              i should be(2)
+              completeOk
+            }
+          }
+        } ~> checkOk
+      }
+
+      "pathPrefixVersion should match when followed by a non-version" in {
+        Get("/hello/v1/2") ~> {
+          pathPrefixVersion("hello", -1) { version =>
+            path(IntNumber) { i =>
+              version should be(1)
+              i should be(2)
+              completeOk
+            }
+          }
+        } ~> checkOk
       }
     }
 
     "when using pathVersion" - {
       "pathVersion should not get a version when not there" in {
         Get("/hello") ~> {
-          pathVersion("hello") { version =>
-            version should be(empty)
+          pathVersion("hello", -1) { version =>
+            version should be(-1)
             completeOk
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
 
       "pathVersion should get a version when there" in {
         Get("/hello/v1") ~> {
-          pathVersion("hello") { version =>
-            version shouldNot be(empty)
-            version.get should be(1)
+          pathVersion("hello", -1) { version =>
+            version should be(1)
             completeOk
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
 
       "pathVersion should not match a non-version" in {
         Get("/hello/2") ~> {
-          pathVersion("hello") { version =>
-            path(IntNumber) { i =>
-              fail()
-            }
+          pathVersion("hello", -1) { version =>
+            fail()
           }
-        } ~> check {
-          handled should be(right = false)
-        }
+        } ~> checkUnhandled
       }
 
-      "pathVersion should match not match when followed by a non-version" in {
+      "pathVersion should not match when followed by a non-version" in {
         Get("/hello/v1/2") ~> {
-          pathVersion("hello") { version =>
-            path(IntNumber) { i =>
-              fail()
-            }
+          pathVersion("hello", -1) { version =>
+            fail()
           }
-        } ~> check {
-          handled should be(right = false)
-        }
+        } ~> checkUnhandled
       }
     }
-
 
     "when using pathVersion with a suffix" - {
       "pathVersion matching for a suffix should not match a non-version when no suffix" in {
         Get("/hello") ~> {
-          pathVersion("hello", IntNumber) { (version, i) =>
+          pathVersion("hello", -1, IntNumber) { (version, i) =>
             fail()
           }
-        } ~> check {
-          handled should be(right = false)
-        }
+        } ~> checkUnhandled
       }
 
       "pathVersion matching for a suffix should not match a version when no suffix" in {
         Get("/hello/v1") ~> {
-          pathVersion("hello", IntNumber) { (version, i) =>
+          pathVersion("hello", -1, IntNumber) { (version, i) =>
             fail()
           }
-        } ~> check {
-          handled should be(right = false)
-        }
+        } ~> checkUnhandled
       }
 
       "pathVersion with a suffix should not get a version when not there" in {
         Get("/hello/2") ~> {
-          pathVersion("hello", IntNumber) { (version, i) =>
-            version should be(empty)
+          pathVersion("hello", -1, IntNumber) { (version, i) =>
+            version should be(-1)
             i should be(2)
             completeOk
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
 
       "pathVersion with a suffix should get a version when there" in {
         Get("/hello/v1/2") ~> {
-          pathVersion("hello", IntNumber) { (version, i) =>
-            version shouldNot be(empty)
-            version.get should be(1)
+          pathVersion("hello", -1, IntNumber) { (version, i) =>
+            version should be(1)
             i should be(2)
             completeOk
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
 
       "pathVersion with multiple suffixes should not get a version when not there" in {
         Get("/hello/2/a1") ~> {
-          pathVersion("hello", IntNumber / Segment) { (version, i, str) =>
-            version should be(empty)
+          pathVersion("hello", -1, IntNumber / Segment) { (version, i, str) =>
+            version should be(-1)
             i should be(2)
             str should be("a1")
             completeOk
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
 
       "pathVersion with multiple suffixes should get a version when there" in {
         Get("/hello/v1/2/a1") ~> {
-          pathVersion("hello", IntNumber / Segment ) { (version, i, str) =>
-            version shouldNot be(empty)
-            version.get should be(1)
+          pathVersion("hello", -1, IntNumber / Segment ) { (version, i, str) =>
+            version should be(1)
             i should be(2)
             str should be("a1")
             completeOk
           }
-        } ~> check {
-          status should be(OK)
-          response should be(OkResponse)
-        }
+        } ~> checkOk
       }
     }
   }
