@@ -23,10 +23,10 @@ object ServerInitializer {
     Await.result(IO(Http)(actorSystem) ? Http.Bind(service, webserviceInterface, webservicePort), timeoutDuration) match {
      case CommandFailed(b: Http.Bind) =>
         actorSystem.log.error(s"Unable to bind to port $webservicePort on interface $webserviceInterface")
-        actorSystem.shutdown()
+        actorSystem.terminate()
      case Failure(t) =>
         actorSystem.log.error(t, "could not bind to port")
-        actorSystem.shutdown()
+        actorSystem.terminate()
      case _ =>
     }
   }

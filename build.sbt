@@ -33,24 +33,26 @@ val artifactory = "https://artifactory.broadinstitute.org/artifactory/"
 
 resolvers += "artifactory-releases" at artifactory + "libs-release"
 
-scalaVersion := "2.11.2"
+scalaVersion := "2.11.7"
 
-scalacOptions := Seq("-feature", "-unchecked", "-deprecation", "-encoding", "utf8")
+javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
+
+scalacOptions := Seq("-feature", "-unchecked", "-deprecation", "-encoding", "utf8", "-target:jvm-1.8")
 
 libraryDependencies ++= {
-  val akkaV = "2.3.6"
-  val sprayV = "1.3.2"
+  val akkaV = "2.4.1"
+  val sprayV = "1.3.3"
   Seq(
     "io.spray" %% "spray-routing" % sprayV
-    , "io.spray" %% "spray-json" % "1.3.1"
+    , "io.spray" %% "spray-json" % "1.3.2"
     , "io.spray" %% "spray-client" % sprayV
     , "io.spray" %% "spray-testkit" % sprayV % "test"
     , "com.typesafe.akka" %% "akka-actor" % akkaV
     , "com.typesafe.akka" %% "akka-slf4j" % akkaV % "provided"
-    , "org.scalatest" %% "scalatest" % "2.2.1" % "test"
+    , "org.scalatest" %% "scalatest" % "2.2.6" % "test"
     // -- Logging --
-    , "org.slf4j" % "slf4j-api" % "1.7.12"
-    , "ch.qos.logback" % "logback-classic" % "1.1.2" % "test"
+    , "org.slf4j" % "slf4j-api" % "1.7.13"
+    , "ch.qos.logback" % "logback-classic" % "1.1.3" % "test"
   )
 }
 
